@@ -1,0 +1,360 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+\documentclass[%
+    %corpo=11pt,  
+    twoside, 
+    a4paper
+    ]{article}
+\let\MakeUppercase\relax
+\linespread{1.2}
+\usepackage{geometry}
+\geometry{a4paper, twoside, top=2.5cm, bottom=2.5cm, left=3cm, right=3cm, bindingoffset=0.5cm}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=english]{babel}
+\usepackage{csquotes}
+
+\usepackage{siunitx}
+\usepackage{subcaption}
+% Specific language
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+%\usepackage{ntheorem}
+\usepackage{physics}
+\usepackage{bm}
+
+\usepackage{standalone}
+\usepackage{pgfplots}
+% and optionally (as of Pgfplots 1.3):
+\pgfplotsset{compat=newest}
+\pgfplotsset{plot coordinates/math parser=false}
+\newlength\figureheight
+\newlength\figurewidth
+
+\usetikzlibrary{shapes,arrows, calc}
+
+% Ref and bibliography
+\usepackage{hyperref}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\newcommand{\Set}[1]{\mathcal{#1}}
+\newcommand{\Vector}[1]{\bm{\MakeLowercase{#1}}}
+\newcommand{\Operator}[1]{\bm{\MakeUppercase{#1}}}
+%%%%%%%%%%
+\DeclareMathAlphabet{\mathsfbr}{OT1}{cmss}{m}{n}%for math sans serif (cmss)
+\SetMathAlphabet{\mathsfbr}{bold}{OT1}{cmss}{bx}{n}%for math sans serif (cmss)
+\DeclareRobustCommand{\msf}[1]{%
+  \ifcat\noexpand#1\relax\msfgreek{#1}\else\mathsfbr{#1}\fi%for math sans serif (cmss)
+}
+\DeclareFontEncoding{LGR}{}{} % or load \usepackage{textgreek}
+\DeclareSymbolFont{sfgreek}{LGR}{cmss}{m}{n}
+\SetSymbolFont{sfgreek}{bold}{LGR}{cmss}{bx}{n}
+\DeclareMathSymbol{\sXi}{\mathalpha}{sfgreek}{`X}
+\DeclareMathSymbol{\sUpsilon}{\mathalpha}{sfgreek}{`U}
+\DeclareMathSymbol{\stheta}{\mathalpha}{sfgreek}{`j}
+%%%%%%%%%%
+
+
+\title{Experience 2: Localization with MLE}
+\author{Federico Forzano}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+    The main goal of this experience is to simulate a localization system for the localization of a single agent
+    in a space by means of four anchors able to measure the distances between them and the agent.
+    In particular, after a brief check of the correctness of the random variables (RVs) generation,
+    we will simulate the measurement process as a given distribution and then we will apply the 
+    maximum likelihood (ML) algorithm for the estimation of the position of the agent.
+    %
+    The main points of this relation are:
+    \begin{itemize}
+        \item a brief presentation of the ML algorithm for the specific case;
+        \item simulation of the localization estimation if the estimator do not know the bias distribution and 
+        performances evaluation in terms of the estimation error;
+        \item performances comparison between the case with known bias distibution.
+    \end{itemize}
+
+\section{MLE for the localization system}
+    The maximum likelihood estimator is an estimator for one or more deterministic unknown parameters $\theta \in \Theta$,
+    designed from the known of the conditional measurements distribution to the parameters
+    $f_{\bm{\msf{X}}|\theta}(\bm{x}|\theta)$, where $\bm{\msf{X}}$ is a random samples of measurements.
+    The general form for the $\theta$ estimator $\hat{\stheta}$ is given by:
+    \begin{equation}
+        \hat{\stheta} = \argmax_{\tilde{\theta} \in \Theta} L_{\bm{\msf{X}}}(\tilde{\theta}),
+        \label{eq:MLE_general}
+    \end{equation}
+    where $L_{\bm{\msf{X}}}(\tilde{\theta})$ is the likelihood function $L_{\bm{x}}(\theta)$ 
+    evaluated before the measurements. The likelihood function is given by: 
+    \begin{equation}
+        L_{\bm{x}}(\theta) = f_{\bm{\msf{X}}|\theta}(\bm{x}|\theta) .
+        \label{eq:likelihood_function}
+    \end{equation}
+
+    \begin{figure}[t]
+        \centering
+        \includestandalone{./images_def/agent_position}
+        \caption{Representation of the anchors position in the considered room and of the real distances $\bm{d}$
+        between the anchors (triangles $1,2,3,4$) and the agent (A). $\Delta$ is the sample space and $L$ is the length of the room's late.
+        The grey rectangle represents the non-line-of-sight (NLOS) condition.}
+        \label{fig:agent_position}
+    \end{figure}
+
+    In our case, we suppose that the four anchors are localized in the four corners of a square room with late 
+    length $L$. Each anchor can performs noisy measurements of the distance between itself and the 
+    agent. If the real distances are $\bm{d} = \left[ d_1, d_2, d_3, d_4 \right]$ (as we can see in figure 
+    \ref{fig:agent_position}), the measured distances are
+    given by $\msf{\breve{D}}_i = d_i + b + \msf{E} $, where $\msf{E} \sim N(0,\sigma^2)$ and $b$ is a possible
+    bias in the measurement process, given by the possibility that one anchor and the agent are not in line of sight
+    (NLOS).
+    The unknown parameter $\theta$ is, in this case, the real position $ \bm{p} = (x,y) $ of the agent and the 
+    random sample $\bm{\msf{X}}$ is the set of the four measured distances from the four anchors 
+    $ \bm{\msf{\breve{D}}} $.
+    %
+    \paragraph{MLE with deterministic unknown bias} \mbox{} \\
+    If we assume that the bias is deterministic but that the estimator do not know if there is, the estimator 
+    $\bm{\msf{\hat{P}}} $ for the position $\bm{p}$ can be obtained from the equation 
+    \ref{eq:likelihood_function} as it follows.
+    The measurements are supposed indipendent and the PDF models of $\msf{\breve{D}}_i|\bm{\tilde{p}}$ for the 
+    design of the estimator $\bm{\msf{\hat{P}}} $ 
+    are Gaussian with mean $d_i$ and variance $\sigma^2$.
+    The likelihood function in this specific case, becomes:
+    \begin{subequations}
+        \begin{align}
+            L_{\bm{\breve{d}}}(\bm{\tilde{p}}) &= f_{\bm{\msf{\breve{D}}}|\bm{\tilde{p}}}(\bm{\breve{d}}|\bm{\tilde{p}}) \\
+            &= \prod_{i=1}^{4} f_{\msf{\breve{D}}_i|\bm{\tilde{p}}}(\breve{d}_i|\bm{\tilde{p}}) \\
+            &= \prod_{i=1}^{4} \frac{1}{\sqrt{2 \pi \sigma^2}} \exp{\frac{(\breve{d}_i - d_i)^2}{2 \sigma^2}} \\
+            &= \left( \frac{1}{\sqrt{2 \pi \sigma^2}} \right)^4 \exp{\frac{1}{2 \sigma^2} \sum_{i=1}^4 (\breve{d}_i - \lVert \bm{p}_i - \bm{\tilde{p}} \rVert)^2},
+        \end{align}
+    \end{subequations}
+    where $\bm{p}_i$ is the position of the $i-th$ anchor.
+    The estimator $\bm{\msf{\hat{P}}} $ can be write as:
+    \begin{subequations}
+        \begin{align}
+            \bm{\msf{\hat{P}}} &= \argmax_{\bm{\tilde{p}} \in \left[-L/2;L/2\right]^2} L_{\bm{\msf{\breve{D}}}}(\bm{\tilde{p}}) \\
+            &= \argmax_{\bm{\tilde{p}} \in \left[-L/2;L/2\right]^2} \left( \frac{1}{\sqrt{2 \pi \sigma^2}} \right)^4 \exp{\frac{1}{2 \sigma^2} \sum_{i=1}^4 (\msf{\breve{D}}_i - \lVert \bm{p}_i - \bm{\tilde{p}} \rVert)^2} \\
+            &= \argmin_{\bm{\tilde{p}} \in \left[-L/2;L/2\right]^2} \sum_{i=1}^4 (\msf{\breve{D}}_i - \lVert \bm{p}_i - \bm{\tilde{p}} \rVert)^2.
+        \end{align}
+        \label{eq:MLE_position}
+    \end{subequations}
+    We can notice that the problem \ref{eq:MLE_position} is a minimum research of a two dimensions function in two 
+    variables; it can have so a closed form solution.
+    \footnote{
+        The minimum research can be done analitically. If we define $ g(x,y) = \sum_{i=1}^4 (\msf{\breve{D}}_i - \lVert \bm{p}_i - \bm{\tilde{p}} \rVert)^2$,
+        we can compute the well defined equation system
+        \begin{equation*}
+            \nabla g(x,y) = \left[ \frac{\partial g(x,y)}{\partial x}, \frac{\partial g(x,y)}{\partial y} \right]^T = [0,0]^T.
+        \end{equation*}
+        The solutions of this system are the stationary point of $g(x,y)$ as function of the $\msf{\breve{D}}_i$ (with $i=1,2,3,4$)
+         and we can check if there are minimum with 
+        the Hessian matrix.
+    } 
+
+    \paragraph{MLE with random bias} \mbox{} \\
+    The previous estimator $\bm{\msf{\hat{P}}} $ was designed considering the bias as deterministic and unknown 
+    in the measurements PDF model. We can design an estimator 
+    $\bm{\msf{\hat{P}_1}} $ with different models for the PDFs $\msf{\breve{D}}_i|\bm{\tilde{p}}$ in 
+    which we consider the bias $b$ as an instantiation of the random variable $\msf{B} \sim Bernoulli(1-P_{LOS})$
+    (where $P_{LOS} = \mathbb{P}\{ \textrm{agent in line of sight} \})$.
+    The measured distances are now given by $\msf{\breve{D}}_i = d_i + \msf{B} + \msf{E} $, where 
+    $\msf{E} \sim N(0,\sigma^2)$ and $d_i$ is the set of the real distances.
+    %
+    The likelihood function \ref{eq:likelihood_function} becomes:
+    \begin{subequations}
+        \begin{align}
+            L_{\bm{\breve{d}}}(\bm{\tilde{p}}) &= f_{\bm{\msf{\breve{D}}}|\bm{\tilde{p}}}(\bm{\breve{d}}|\bm{\tilde{p}}) \\
+            &= \prod_{i=1}^{4} f_{\msf{\breve{D}}_i|\bm{\tilde{p}}}(\breve{d}_i|\bm{\tilde{p}}) \\
+            &= \prod_{i=1}^{4} P_{LOS} \frac{1}{\sqrt{2 \pi \sigma^2}} \exp{\frac{(\breve{d}_i - d_i)^2}{2 \sigma^2}} + (1-P_{LOS}) \frac{1}{\sqrt{2 \pi \sigma^2}} \exp{\frac{(\breve{d}_i - d_i - b)^2}{2 \sigma^2}}
+        \end{align}
+        \label{eq:likelihood_randomB}
+    \end{subequations}
+    %
+    We can notice that the PDFs $f_{\msf{\breve{D}}_i|\bm{\tilde{p}}}(\breve{d}_i|\bm{\tilde{p}})$ are no more
+    Gaussian and so we can not simplify the likelihood function expression.
+    The estimator $\bm{\msf{\hat{P}_1}} $ can be obtained, as in previous case, as:
+    \begin{equation}
+        \bm{\msf{\hat{P}_1}} = \argmax_{\bm{\tilde{p}} \in \left[-L/2;L/2\right]^2} L_{\bm{\msf{\breve{D}}}}(\bm{\tilde{p}}).
+        \label{eq:MLE_randomB}
+    \end{equation}
+
+    \section{Simulation results}
+    In this section we show the results obtained with a software simulation. We have tested the two ML algorithms
+    \ref{eq:MLE_position} and \ref{eq:MLE_randomB} with an exhaustive search in all the space point. In order to 
+    do this we have choose $L = 10\si{m}$ and we have sampled the two axis with a sample step $\Delta = 0.05 \si{m}$.
+    The chooice of the sample space is very important because, if this is too large compared to the error $\msf{E}$
+    and to the bias value $b$, it is possible that these are not detected. We have chooice $\Delta$ such that 
+    $\sigma$ and $b$ are at least twice then it.
+    The real position $\bm{p}$ of the agent was generated with a random uniform variable instantiation for 
+    $P$ times. For each of the $P$ iterations the presence or the absence of the bias for each anchor is choosen
+    with a Bernoulli distribution with parameter $1-P_{LOS}$ where $P_{LOS} = 0.7$ is the probability that the agent 
+    is in line-of-sight with the anchor.
+    %
+    \begin{figure}[t]
+        \centering
+        \begin{subfigure}[t]{0.45\linewidth}
+            % \centering
+            \includestandalone{./images_def/agent_scattering_def}
+            \caption{Plot of the agent positions generating as a random uniform variable instantiations.}
+            \label{fig:agent_scattering}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[t]{0.45\linewidth}
+            % \centering
+            \includestandalone{./images_def/bias_pmf}
+            \caption{Histogram of the bias value $b$ for the anchor 1. The value of the bias if the agent 
+            is not in line of sight was been setted to $b=0.10 \si{m}$.}
+            \label{fig:bias_hist}
+        \end{subfigure}
+    \end{figure}
+    %
+    In figure \ref{fig:agent_scattering} we can see that the generated positions for the agent are 
+    well uniform distributed on all the considered space. In figure \ref{fig:bias_hist}, the 
+    rate of the $b=0 \si{m}$ and $b=0.10 \si{m}$ occurences for the anchor 1 are plotted. We can see that the 
+    histograms follow the $P_{LOS}$ and $P_{NLOS}$ choosen values.
+
+    \subsection{MLE with unknown deterministic bias results}
+    The first tested position estimator $\bm{\msf{\hat{P}}}$ is the MLE with unknown deterministic 
+    bias \ref{eq:MLE_position}.
+    In order to evaluate its performances, we have simulated the localization process for $P=10000$
+    times, with different $\sigma$ and $b$ values.
+    %
+    \begin{figure}[t]
+        \centering
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includestandalone{./images_def/MSE_biased_def}
+            \caption{$MSE$ as function of $\sigma^2$ for different values of $b$.}
+            \label{fig:MSE_deterministicb}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[t]{0.49\linewidth}
+            \centering
+            \includestandalone{./images_def/MSE_funcb_biased_def}
+            \caption{$MSE$ as function of $b$ for different values of $\sigma^2$.}
+            \label{fig:MSE_funcb_deterministicb}
+        \end{subfigure}
+        \caption{Mean square error ($MSE$) in position estimation as function of the noise variance 
+        $\sigma^2$ and of the bias value $b$. The plot was obtained with $P=10000$ instantiations and 
+        with a sample step for the space $\Delta = 0.05 \si{m}$.}
+    \end{figure}
+    %
+
+    In figure \ref{fig:MSE_deterministicb} we can see the performances as the mean square error ($MSE$)
+    in terms of the noise variance $\sigma^2$ for different values of bias $b$. The mean square error
+    is obtained as 
+    \begin{equation}
+        MSE = \frac{1}{P} \sum_{i=1}^P \lVert \bm{p_i} - \bm{\hat{p}_i} \rVert^2,
+        \label{eq:MSE}
+    \end{equation}
+    where $\bm{p_i}$ is the $i-th$ real position and $\bm{\hat{p}_i}$ is the $i-th$ estimated 
+    position (instantiation of the estimator $\bm{\msf{\hat{P}}}$).
+    We can observe that the $MSE$ as function of $\sigma^2$ is linear and the bias translate the 
+    lines up. The translation step of the lines is not equal to $b$ because the NLOS event occurs 
+    only with a probability $P_{NLOS} = 0.3$.
+    If the chosen sample step was too big, for the smaller $\sigma^2$ and $b$ the plot would be 
+    almost random becuse the noise and bias errors would be comparable with the sampling error.
+
+    In figure \ref{fig:MSE_funcb_deterministicb} we can see the $MSE$ as function of $b$ for 
+    different values of $\sigma^2$. The plots grow with the bias $b$ non-linearly 
+    and the $MSE$ is higher for higher values of $\sigma^2$.
+    %
+    \begin{figure}[t]
+        \centering
+        \includestandalone{./images_def/CCDF_biased_def}
+        \caption{Complementary cumulative distribution functions ($CCDF$) for the error $\hat{e}$ 
+        (defined in equation \ref{eq:error_def}) with the estimator $\bm{\msf{\hat{P}}}$, for 
+        different values of $\sigma^2$. The plots are 
+        obtained with $P=10000$ and $b=0.10 \si{m}$.}
+        \label{fig:CCDF_unknownb}
+    \end{figure}
+    %
+
+    In the figure \ref{fig:CCDF_unknownb} is plotted the simulated complementary cumulative 
+    distribution function ($CCDF$) of the error $\msf{\hat{E}}$.
+    The instantiation of the error $\msf{\hat{E}}$ is defined as
+    \begin{equation}
+        \hat{e} = \lVert \bm{p} - \bm{\hat{p}} \rVert,
+        \label{eq:error_def}
+    \end{equation}
+    and the $CCDF$ is
+    \begin{equation}
+        1-F_{\msf{\hat{E}}}(\hat{e}) = \mathbb{P}\{ \lVert \bm{p} - \bm{\hat{p}} \rVert \geq  \hat{e}\}.
+    \end{equation}
+    We can observe that for higher $\sigma^2$ values, the plots decrase more smoothly, i.e the 
+    errors have greater probability to be big.
+
+    \subsection{MLE with random bias results}
+    We evaluate now the performance of the estimator $\bm{\msf{\hat{P}_1}}$ designed as in 
+    the equation \ref{eq:MLE_randomB} and we compare it with the previous results.
+    As for the $\bm{\msf{\hat{P}}}$ we have plotted the $MSE$ and the $CCDF$ for different values
+    of $\sigma^2$ and $b$ with $P=10000$ instantiations.
+    The $MSE$ was computed as in equation \ref{eq:MSE}.
+    %
+    \begin{figure}[t]
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includestandalone{./images_def/MSE_comparison}
+            \caption{$MSE$ as function of $\sigma^2$ for the bias values \mbox{$b=0 \si{m}, 0.8 \si{m}$}.}
+            \label{fig:MSE_comparison}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includestandalone{./images_def/MSE_funcb_comparison}
+            \caption{$MSE$ as function of $b$ for the variance values \mbox{$\sigma^2=
+            0.01 \si{m^2}, 0.64 \si{m^2}$}.}
+            \label{fig:MSE_funcb_comparison}
+        \end{subfigure}
+        \caption{Mean square error ($MSE$) in position estimation as function of the noise variance 
+        $\sigma^2$ and of the bias value $b$. Continuous lines represent the performances of the 
+        estimator $\bm{\msf{\hat{P}}}$; the dashed lines represent the performances of the estimator 
+        $\bm{\msf{\hat{P}_1}}$. The plot was obtained with $P=10000$ instantiations and 
+        with a sample step for the space $\Delta = 0.05 \si{m}$.}
+    \end{figure}
+    %
+
+    In figure \ref{fig:MSE_comparison} we can see the compared performances in term of $MSE$
+    of the two estimators $\bm{\msf{\hat{P}}}$ and $\bm{\msf{\hat{P}_1}}$ as a functions of 
+    $\sigma^2$.
+    We highlight that for $b=0\si{m}$, the plots for the two estimators are the same; for 
+    $b=0.8\si{m}$ the estimator $\bm{\msf{\hat{P}_1}}$ performs better. This difference is 
+    because the second estimator is designed with a composite PDF \ref{eq:likelihood_randomB} in 
+    which the bias is considered as a random variable.
+    
+    In the figure \ref{fig:MSE_funcb_comparison} we can see that the gain of the second estimator
+    is as high as the bias value is high. We would have a similar effect for higher probability of 
+    non-line-of-sight $P_{NLOS}$.
+    %
+    \begin{figure}[t]
+        \centering
+        \includestandalone{./images_def/CCDF_unbiased_def}
+        \caption{Complementary cumulative distribution function ($CCDF$) for the error $\hat{e}$ 
+        (defined in equation \ref{eq:error_def}) with the estimator $\bm{\msf{\hat{P}_1}}$, for 
+        different values of $\sigma^2$. The plots are 
+        obtained with $P=10000$ and $b=0.10 \si{m}$.}
+        \label{fig:CCDF_randomb}
+    \end{figure}
+    %
+    The dependency on the noise variance $\sigma^2$ is similar to the previous case. In figure 
+    \ref{fig:CCDF_randomb} we can see that the complementary CDF is quite the same of the CCDF in 
+    figure \ref{fig:CCDF_unknownb}. The only difference between the two estimators is indeed, the 
+    knowladge of the bias distribution.
+
+    \section{Conclusion}
+    In this relation we have shown the performances of two different estimators for the position 
+    of an agent in a room. The first estimator was designed as a maximum likelihood estimator 
+    considering the measurements' bias as deterministic but unknown from the estimator. The second
+    estimator was designed as a MLE with a random bias with Bernoulli's distribution.
+    We have seen that the second one has better performances in term of the error in the estimation
+    process but the first one permits to simplify the maximum likelihood function expression.
+    The limits of the exhaustive search were discussed highlighting the importance of the chooice of 
+    the space sample step.
+    In addition to that we identify now another relevant problem: the processing time with this 
+    approach is extremely high, especially with the second estimator. In order to solve this problem
+    it can be usefull to find the closed form of the estimator instead of the use of the exhaustive
+    search approach.
+
+\end{document}

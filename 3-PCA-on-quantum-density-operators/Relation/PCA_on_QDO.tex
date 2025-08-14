@@ -1,0 +1,352 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+\documentclass[%
+    %corpo=11pt,  
+    twoside, 
+    a4paper
+    ]{article}
+\let\MakeUppercase\relax
+\linespread{1.2}
+\usepackage{geometry}
+\geometry{a4paper, twoside, top=2.5cm, bottom=2.5cm, left=3cm, right=3cm, bindingoffset=0.5cm}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=english]{babel}
+\usepackage{csquotes}
+
+\usepackage{siunitx}
+\usepackage{subcaption}
+% Specific language
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{amssymb}
+%\usepackage{ntheorem}
+\usepackage{physics}
+\usepackage{bm}
+
+\usepackage{standalone}
+\usepackage{pgfplots}
+% and optionally (as of Pgfplots 1.3):
+\pgfplotsset{compat=newest}
+\pgfplotsset{plot coordinates/math parser=false}
+\newlength\figureheight
+\newlength\figurewidth
+
+\usetikzlibrary{shapes,arrows, calc}
+% Style to select only points from #1 to #2 (inclusive)
+\pgfplotsset{select coords between index/.style 2 args={
+    x filter/.code={
+        \ifnum\coordindex<#1\def\pgfmathresult{}\fi
+        \ifnum\coordindex>#2\def\pgfmathresult{}\fi
+    }
+}}
+\newcommand{\imagesPath}{./Images}
+
+% Ref and bibliography
+\usepackage{hyperref}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\newcommand{\Set}[1]{\mathcal{#1}}
+\newcommand{\Vector}[1]{\bm{\MakeLowercase{#1}}}
+\newcommand{\Operator}[1]{\bm{\MakeUppercase{#1}}}
+%%%%%%%%%%
+\DeclareMathAlphabet{\mathsfbr}{OT1}{cmss}{m}{n}%for math sans serif (cmss)
+\SetMathAlphabet{\mathsfbr}{bold}{OT1}{cmss}{bx}{n}%for math sans serif (cmss)
+\DeclareRobustCommand{\msf}[1]{%
+  \ifcat\noexpand#1\relax\msfgreek{#1}\else\mathsfbr{#1}\fi%for math sans serif (cmss)
+}
+\DeclareFontEncoding{LGR}{}{} % or load \usepackage{textgreek}
+\DeclareSymbolFont{sfgreek}{LGR}{cmss}{m}{n}
+\SetSymbolFont{sfgreek}{bold}{LGR}{cmss}{bx}{n}
+\DeclareMathSymbol{\sXi}{\mathalpha}{sfgreek}{`X}
+\DeclareMathSymbol{\sUpsilon}{\mathalpha}{sfgreek}{`U}
+\DeclareMathSymbol{\stheta}{\mathalpha}{sfgreek}{`j}
+%%%%%%%%%%
+
+
+\title{PCA on a dataset of quantum density operators\\\large{Experience 3}}
+\author{Federico Forzano}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+    The aim of this relation is the application of the classical \emph{principal component analysis} (PCA) on 
+    a dataset of quantum states' density operators defined in high dimensional Hilbert spaces.
+    The dataset was generated with the python tool QuTiP \cite{Johansson_2012,Johansson_2013}.
+    If the PCA algorithm works correctly on the dataset, we expect that density operators of 
+    similar states will be mapped in near reduced datas.
+
+    In the first part of this relation, we will summarize the key aspect of the PCA and we will 
+    briefly describe the dataset.
+    Then we will show some results obtained appling the PCA algorithm on the dataset.
+    
+    \emph{Notation:} Random variables are displayed in sans serif uppercase font ($\msf{X}$) and their 
+    realizations in serif font ($x$). Each scalar number is displayed in lower case symbol ($x$),
+    vectors in lower case bold ($\bm{x}$) and operators or matrix in upper case bold ($\bm{X}$).
+%
+\section{Preliminary notions}
+    In this section we give a brief overview of the theoretical backgroud of the experience.
+    The aim of that is to explain how the results were obtained and what is the dataset.
+    Firstly we will describe the PCA algorithm with data with complex values. Then we will 
+    describe the dataset and the metrics for the datas reduction evaluation.
+    
+    \subsection{Principal component analysis}
+        The principal component analysis (PCA) is a tecnique for the reduction of the data
+        dimensionality. It is very useful for the elaboration of dataset where each data 
+        is an high dimensional data and the variance of the dataset can be isolated in a small
+        number of dimensions. In this section we give a brief description of the algorithm.
+        
+        Given a set of datas $\{ \bm{x_1}, \bm{x_2}, \dots, \bm{x_n}\}$, where 
+        $ \bm{x_i} \in \mathbb{C}^d $ ($\mathbb{C}$ is the complex numbers set) is a column vector;
+        we can define the datas matrix $\bm{X} \in \mathbb{C}^{d \times n}$ as:
+        \begin{equation}
+            \label{eq:data_matrix}
+            \bm{X} \coloneqq \left[ \bm{x_1}\ \bm{x_2}\ \dots\ \bm{x_n} \right].
+        \end{equation}
+        We can also define the sample mean vector $\bm{\overline{x}}$ as:
+        \begin{equation}
+            \label{eq:mean_vector}
+            \bm{\overline{x}} \coloneqq \left[ \overline{x}_1\ \overline{x}_2\ \dots\ \overline{x}_d \right]^{T}
+        \end{equation}
+        where 
+        \begin{equation*}
+            \overline{x}_j \coloneqq \frac{1}{n} \sum_{i=1}^{n} x_{ij},
+        \end{equation*}
+        and a matrix $\bm{A}$ (similar to the sample covariance matrix) as:
+        \begin{equation}
+            \label{eq:covariance_matrix}
+            \bm{A} \coloneqq \sum_{j=1}^{n} \left( \bm{x_j} - \bm{\overline{x}} \right)
+            \left( \bm{x_j} - \bm{\overline{x}} \right)^\dagger.
+        \end{equation}
+        %
+        The goal is to find the $l$ directions $\{ \bm{u_1}\ \bm{u_2}\ \dots\ \bm{u_l} \}$ that
+        allow us to minimize the lost information,
+        if we approximate each data $\bm{x_j}$ as:
+        \begin{equation}
+            \label{eq:reconstructed data}
+            \bm{\tilde{x}_j} = \sum_{k=1}^l y_{kj} \bm{u_k},
+        \end{equation}
+        where:
+        \begin{equation*}
+            y_{kj} = \bm{u_k}^\dagger \bm{x_j}.
+        \end{equation*}
+        If we are able to do this, we can approximate the data $\bm{x_j} \in \mathbb{C}^d$ with a
+        less dimensional vector $\bm{y_j} = \left[ y_{1j}\ y_{2j}\ \dots\ y_{lj} \right]^T $.
+        
+        Thanks to the Raileigh-Ritz theorem on the eigenvalues of an Hermitian matrix, we
+        know that: if $\{ \lambda_1,\ \lambda_2,\ \dots,\ \lambda_d \} $ are the eigenvalues
+        of $\bm{A}$ with $ \lambda_1 \geq \lambda_2 \geq \dots \geq \lambda_d $ and 
+        $\{ \bm{u_1},\ \bm{u_2},\ \dots,\ \bm{u_d} \}$ are the correspondents eigenvectors; 
+        the $l$ directions that allow us to approximate the datas with the lowest information loss
+        are $\{ \bm{u_1},\ \bm{u_2},\ \dots,\ \bm{u_l} \}$.
+        %
+    \subsection{The dataset}
+        The chosen dataset is a set of quantum density operators $\{ \bm{\varXi_i} \}_i$ of continuous
+        variables states with thermal noise. All the operators are given in the matrix representations
+        respect to the fock basis.
+        The dataset was generated, using the python toolbox QuTiP \cite{Johansson_2012,Johansson_2013},
+        from a thermal noise state with a random mean number of photon, applying the 
+        quantum displeacement operator $\bm{D_{\mu}}$ and the squeezing operator 
+        $\bm{S_{\zeta}}$. The dimension of the operators would be infinite; in order to 
+        create a dataset with a finite dimensional datas, all the matrices were truncated
+        at the dimension $N=50$.
+
+        The thermal state fock representation is given by \cite{tesiGuerrini}:
+        \begin{equation}
+            \label{eq:thermalState}
+            \bm{\varXi_{th}} = (1-v) \sum_{n=0}^{+\infty}v^n \ket*{n} \bra*{n},
+        \end{equation}
+        where $v = \frac{\bar{n}}{\bar{n}+1}$ and $\bar{n}$ is the mean number of photons
+        in the state.
+        From this state, were generated the coherent states applying the displeacement operator
+        $\bm{D_{\mu}}$ (defined in \cite{tesiGuerrini}) as:
+        \begin{equation}
+            \label{eq:coherentState}
+            \bm{\varXi}(\mu) = \bm{D_{\mu}} \bm{\varXi_{th}} \bm{D_{\mu}}^{\dagger};
+        \end{equation}
+        and the squeezed states, applying the squeezing operator $\bm{S_\zeta}$, as:
+        \begin{equation}
+            \label{eq:squeezedState}
+            \bm{\varXi}(\mu, \zeta) = \bm{D_{\mu}} \bm{S_{\zeta}} \bm{\varXi_{th}} \bm{S_{\zeta}}^{\dagger} 
+            \bm{D_{\mu}}^{\dagger}.
+        \end{equation}
+        %
+        The dataset consists of 80 density operators divided as follows:
+        \begin{itemize}
+            \item 20 only thermal noise operators: $\bm{\varXi_{th}}$;
+            \item 20 noisy coherent states operators with displeacement parameter
+            $\mu = 1$: $\bm{\varXi}(1)$;
+            \item 20 noisy squeezed states operators with displeacement parameter
+            $\mu = 1$ and squeezing parameter $\zeta = 0.2 e^{\imath \pi}$: 
+            $\bm{\varXi}(1, 0.2 e^{\imath \pi})$;
+            \item 20 noisy squeezed states operators with displeacement parameter
+            $\mu = 1$ and squeezing parameter $\zeta = 0.5 e^{\imath \pi}$: 
+            $\bm{\varXi}(1, 0.5 e^{\imath \pi})$;
+        \end{itemize}
+        The mean number of photons $\bar{n}$ for each state was generated as an 
+        instantation of a random variable 
+        $\msf{\bar{N}} \sim \mathcal{N}(\mu = 0.1, \sigma^2 = 0.01)$.
+
+        Each data in the dataset is a $N \times N$ matrix, in order to apply the PCA
+        algorithm we have reshaped the datas in a 1-dimensional vector. 
+        %
+    \subsection{Metrics}
+        %
+        \begin{figure}[t]
+            \centering
+            \begin{subfigure}[t]{0.49\linewidth}
+                \includestandalone{\imagesPath/5levelSC_2PCs}
+                \caption{Scatter plot of the reduced datas with $l=2$.}
+                \label{fig:l2PCA}
+            \end{subfigure}
+            \hfill
+            \begin{subfigure}[t]{0.49\linewidth}
+                \includestandalone{\imagesPath/5levelSC_3PCs}
+                \caption{Scatter plot of the reduced datas with $l=3$.}
+                \label{fig:l3PCA}
+            \end{subfigure}
+            \caption{Scatter plot of the datas after the PCA was applied, with $l=2$ and $l=3$.}
+        \end{figure}
+        %
+        The PCA allow us to reduce the data dimensionality but it is not a free-loss 
+        process. In order to evaluate how much information has been lost we need a 
+        metric for the evaluation of the algorithm. This metric can 
+        be used for choice an enough large dimension $l$ that preserve most of the
+        datas informations.
+        We have considered 3 metrics: the eigenvalues metric, the classical mean square
+        error (CMSE) metric and the quantum mean square error (QMSE) metric.
+
+        The \emph{eigenvalues metric} provides the choice of a threshold $\alpha^* \in 
+        \left[ 0, 1 \right]$.
+        The dimension $l$ is chosen such that:
+        \begin{equation}
+            \label{eq:eigenvaluesMetric}
+            l = \min \left\{ l \in \left\{ 1,2,\dots,d \right\}: 
+            \frac{\sum_{i=1}^l \lambda_i}{\sum_{i=1}^d \lambda_i} \geq \alpha^* \right\}
+        \end{equation}
+        Because the eigenvectors associated to the eigenvalues $\lambda_i$ of the matrix 
+        $\bm{A}$ collects the variance of the dataset, we can suppose that if we consider 
+        a number of eigenvalues high enough, we represent most of the information of the 
+        dataset.
+
+        The \emph{mean square error} metrics are based on a definition of distance between
+        two datas $d: \mathbb{C}^d \to \mathbb{R}$. 
+        After applying the PCA on the dataset $\left\{ \bm{x_i} \right\}_i$, we can obtain
+        an approximate dataset $\left\{ \bm{\tilde{x}_i} \right\}_i$ as in equation 
+        \ref{eq:reconstructed data}. The mean square error (MSE) is defined as:
+        \begin{equation}
+            \label{eq:MSE}
+            \mathrm{MSE} \coloneqq \frac{1}{n} \sum_{i=1}^n d^2(\bm{x_i},\bm{\tilde{x}_i}).
+        \end{equation}
+        %
+        The choice of the dimension $l$ can be done choosing a MSE threshold 
+        $\mathrm{MSE}^*$ as it follows:
+        \begin{equation}
+            \label{eq:MSEMetric}
+            l = \min \left\{ l \in \left\{ 1,2,\dots,d \right\}: 
+            \mathrm{MSE} \leq \mathrm{MSE}^* \right\}.
+        \end{equation}
+        %
+        The distance function $d(\cdot,\cdot)$ can be defined as a classical distance 
+        between two vector or we can define it with a quantum definition.
+        The classical definition of distance between two complex vector 
+        $\bm{x} = \left[ x_1\ x_2\ \dots\ x_d \right]^{T}$ and 
+        $\bm{y} = \left[ y_1\ y_2\ \dots\ y_d \right]^{T}$, is given by:
+        \begin{equation}
+            \label{eq:classicalDistance}
+            d(\bm{x}, \bm{y}) \coloneqq \sqrt{\left( \bm{x} - \bm{y} \right)^{\dagger}
+             \left( \bm{x} - \bm{y} \right)};
+        \end{equation}
+        The quantum distance between two states is given by the trace distance 
+        \cite{10.5555/1972505} of the two 
+        density operators $\bm{\varXi_1}$ and $\bm{\varXi_2}$, i.e:
+        \begin{equation}
+            \label{eq:traceDistance}
+            d(\bm{\varXi_1},\bm{\varXi_2}) \coloneqq \frac{1}{2} \| \bm{\varXi_1} 
+            -\bm{\varXi_2} \|_1,
+        \end{equation}
+        where $\| \cdot \|_1$ is the trace norm operator.
+    %   
+\section{Results}
+    %
+    \begin{figure}[t]
+        \centering
+        \includestandalone{\imagesPath/Eigenvalues_dimension_criterium_4}
+        \caption{Plot of considered eigenvalues percentage as function of the number of 
+        dimensions $l$.}
+        \label{fig:eigenvaluesPlot}
+    \end{figure}
+    %
+    %
+    \begin{figure}[t]
+        \centering
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includestandalone{\imagesPath/MSE_dimension_criterium_4}
+            \caption{Quantum mean square error (QMSE) as function of the dimensions $l$.}
+        \label{fig:QMSE}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includestandalone{\imagesPath/CMSE_dimension_criterium_4}
+            \caption{Classical mean square error (CMSE) as function of the dimensions $l$.}
+            \label{fig:CMSE}
+        \end{subfigure}
+        \caption{Plots of the mean square errors (MSE) in the approximation of the datas
+        varying the number of considered dimensions $l$, for the quantum states distance definition
+        \ref{eq:traceDistance} and for the classical distance definition \ref{eq:classicalDistance}.}
+    \end{figure}
+    %
+    We will show now the effect of the PCA on the dataset described in the previous 
+    section.
+    The target dimensions $l$ for the reduced data were not chosen using one of the criteria
+    described before but we have used $l=2,3$ in order to visualize the reduced datas
+    in a plot.
+    % The three criteria were applied after in order to assess the 
+
+    In figure \ref{fig:l2PCA} and \ref{fig:l3PCA} we can see a representation of the
+    vectors $\left\{\bm{y_i}\right\}_i$ respectively for $l=2$ and $l=3$.
+    Each reduced vector has been interpreted as a $\mathbb{R}^l$ element and it has been
+    plotted as a point.
+    We can notice that different quantum states (plotted in different colors) are mapped
+    in near point. The PCA algorithm has preserved the differentiation between them.
+    Another relevant aspect that can be seen is that the states are well distinguishable
+    in both the 2-dimensional plot and the 3-dimensional one. We can assume that the first two 
+    components $\bm{u_1}$ and $\bm{u_2}$ contain most of the information about the dataset (at 
+    least as regards the distinguishability of the states).
+
+    If we look the figure \ref{fig:eigenvaluesPlot} we can see that, for $l \geq 2$, the percentage of
+    eigenvalues covered is near to $100\%$. We find confirmation that with $l=2$ we are considering most of 
+    the variance of the dataset.
+    In figures \ref{fig:QMSE} and \ref{fig:CMSE} we can see that for $l \geq 2$ the QMSE and the CMSE are near 
+    to $0$.
+    We can also see that the mean square errors, computed with the two distance definitions \ref{eq:traceDistance}
+    and \ref{eq:classicalDistance}, have the same trend. The two definitions are therefore substantially equivalent
+    for the evaluation of the needed dimensions $l$.
+    %
+\section{Conclusions}
+    In this work we have shown an application of the PCA on a dataset of quantum states density operators.
+    We have seen that, for this dataset, a PCA with at least 2 dimensions $l$ is sufficient for distinguish
+    the states and we have seen that the MSE in the dataset reconstruction can be reduced to 
+    $\mathrm{MSE} \simeq 0$ for $l$ high enough.
+
+    We highlight a criticality of the PCA: the $\bm{A}$ matrix is a $d \times d$ matrix. The dimension $d$
+    could be very high and so the PCA can be very expansive in terms of memory.
+    In addition to that, the calculation of the eigenvalues for a large matrix is a computationally 
+    expansive operation, even if the singular value decomposition algorithm is used (The complexity
+    of the SVD algorithm for a $m \times n$ matrix is $O(mn^2)$ \cite{DBLP:journals/corr/abs-1710-02812}).
+
+    Finally we highlight that the definition of PCA used in this work is a classical definition: all the
+    datas were considered as complex vectors. 
+    This approach allow us to reduce the data dimensionality and preserve the distinguishability of 
+    the data but do not assure us that the datas $\{\bm{\tilde{x}_i}\}_i$ are meaningful in quantum sense.
+
+\newpage
+\bibliographystyle{IEEEtran}
+\bibliography{bibliography}
+\end{document}

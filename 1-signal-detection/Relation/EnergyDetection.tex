@@ -1,0 +1,265 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+\documentclass[%
+    %corpo=11pt,  
+    twoside, 
+    a4paper
+    ]{article}
+\let\MakeUppercase\relax
+\linespread{1.2}
+\usepackage{geometry}
+\geometry{a4paper, twoside, top=2.5cm, bottom=2.5cm, left=3cm, right=3cm, bindingoffset=0.5cm}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=english]{babel}
+\usepackage{csquotes}
+
+\usepackage{siunitx}
+\usepackage{subcaption}
+% Specific language
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+%\usepackage{ntheorem}
+\usepackage{physics}
+\usepackage{bm}
+
+\usepackage{standalone}
+\usepackage{pgfplots}
+% and optionally (as of Pgfplots 1.3):
+\pgfplotsset{compat=newest}
+\pgfplotsset{plot coordinates/math parser=false}
+\newlength\figureheight
+\newlength\figurewidth
+
+% Ref and bibliography
+\usepackage{hyperref}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+\newcommand{\Set}[1]{\mathcal{#1}}
+\newcommand{\Vector}[1]{\bm{\MakeLowercase{#1}}}
+\newcommand{\Operator}[1]{\bm{\MakeUppercase{#1}}}
+%%%%%%%%%%
+\DeclareMathAlphabet{\mathsfbr}{OT1}{cmss}{m}{n}%for math sans serif (cmss)
+\SetMathAlphabet{\mathsfbr}{bold}{OT1}{cmss}{bx}{n}%for math sans serif (cmss)
+\DeclareRobustCommand{\msf}[1]{%
+  \ifcat\noexpand#1\relax\msfgreek{#1}\else\mathsfbr{#1}\fi%for math sans serif (cmss)
+}
+\DeclareFontEncoding{LGR}{}{} % or load \usepackage{textgreek}
+\DeclareSymbolFont{sfgreek}{LGR}{cmss}{m}{n}
+\SetSymbolFont{sfgreek}{bold}{LGR}{cmss}{bx}{n}
+\DeclareMathSymbol{\sXi}{\mathalpha}{sfgreek}{`X}
+\DeclareMathSymbol{\sUpsilon}{\mathalpha}{sfgreek}{`U}
+%%%%%%%%%%
+
+
+\title{Experience 1: Energy detection}
+\author{Federico Forzano}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+  This experience is based on the energy detection process proposed in the paper \cite{BarDaiConWin:J15} for
+  ranging applications. 
+  The goal of the energy detection is to find the presence or the absence of the signal in an energy bin. The
+  detection of the signal in a sequence of bins allows us to develop algorithms for the detection of the main path
+  in wireless propagation channels that allow us to extimate, for example, the time of fly of the signal and 
+  then the distance of the signal source.
+
+  The experience has mainly two goals:
+  \begin{itemize}
+    \item verify with a simulation that the statistical pdf of the $i-th$ bin random variable 
+    $\msf{B}_i$ is a $\chi^2$ pdf;
+    \item evaluate the performance of two different algorithms for the detection of the signal in a sequence
+          of bins: the \emph{maximum bin search} (MBS) and the \emph{threshold crossing search} (TCS).
+  \end{itemize}
+  
+\section{Elements of ranging systems}
+  In order to estimate the distance of a signal source from the received signal, one of the possible ways is to evaluate
+  the energy level of the last one. 
+  In particular we suppose that the transmitter emits $N_p$ copies of a signal $s(t)$. The aim of a ranging 
+  system is to estimate the delay time $\tau$ before the signal is received by the receiver which performs 
+  $N_p$ obseravations each with duration $T_{obs}$. Given the time $\tau$, it is immediate to find the estimation
+  of the distance $d = c \tau$, where c is, usually, the speed of light in vacuum constant.
+  In this process the key role is to correctly find the delay time $\tau$ of the arrival of the main signal,
+  in the general case with possible reflection or rifraction of the signal. The choosen approach is to evaluate
+  the bin of energy of the received signal.
+  
+  If we suppose that the received signal can be written as
+  \begin{equation}
+    r(t) = u(t) + n(t),
+  \end{equation}
+  where $u(t)$ is the received signal (which is not equal to $s(t)$ in general) and $n(t)$ is AWGN with 
+  variance $\sigma^2$ and average $0$; we can define
+  the $i-th$ energy bin $\beta_{i,p}$ for the $p-th$ observation as:
+  \begin{equation}
+    \beta_{i,p} = \sum_{s=0}^{N_{sb}-1} r^2(t_{i,p,s}),
+  \end{equation}
+  where $t_{i,p,s}$ is the instant of the $(i+s)-th$ sample of the signal for the $p-th$ observation and 
+  $N_{sb}$ is a project parameter. The total number of bins results $N_b$. 
+  The bins obtained for each observation are then processed by an averaging block and we obtain a bins array
+  $\Vector{b} = \left[b_0, b_1, \dots, b_{N_b-1}\right]$.
+  
+  The $i-th$ bin $b_i$ is an instantiation of the RV $\msf{B}_i$ and it can be proven (we will verify
+  empirically in the next section), that
+  \begin{equation}
+    \msf{B}_i \sim \frac{\sigma^2}{N_p} \chi^2_{N_p N_{sb}}(\lambda_i)
+    \label{eq:bin_dist}
+  \end{equation}
+  where $N_p N_{sb}$ is the freedom degrees and $\lambda_i$ is the non-centrality parameter of the $\chi^2$
+  defined as
+  \begin{equation}
+    \lambda_i = \sum_{p=0}^{N_p-1} \sum_{s=0}^{N_{sb}-1} \frac{u_{i,p,s}^2}{\sigma^2}.
+    \label{eq:lambda_par}
+  \end{equation}
+
+  For the decision about which bin is the one which contains the main signal we can use different algorithms.
+  The two which we will test are the \emph{threshold crossing search} (TCS) and the \emph{maximum bin search}
+  (MBS).
+  Both algorithms analize only the bins which exceeded a given threshold $\xi_i$ (the footer $i$ is because it can 
+  be different for each bin, in general), if at least one does it (event $\mathcal{C}_{th}$). The difference
+  between them is that the TCS algorithm choose the $\hat{\imath}-th$ bin if:
+  \begin{equation}
+    \hat{\imath} = \min\{i \in \mathcal{B} | b_i > \xi_i\},
+  \end{equation}
+  where $\mathcal{B}$ is the set of all possible $i$;
+  the MBS indeed choose the higher bin $b_{\hat{\imath}}$ which exceeded the threshold, i.e:
+  \begin{equation}
+    \hat{\imath} = \argmax_{i \in \mathcal{B}}\{b_i\}.
+  \end{equation}
+
+  %
+  \begin{figure}[t]
+    \begin{subfigure}[t]{0.49\linewidth}
+      \includestandalone{./Images/signal_bin}
+      \caption{Comparison for the bin with signal. The choosen SNR is $\gamma = 15 \si{dB}$.}
+      \label{fig:signal_bin}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.49\linewidth}
+      \includestandalone{./Images/noise_bin}
+      \caption{Comparison for the only noise bin.}
+      \label{fig:noise_bin}
+    \end{subfigure}
+    \caption{Comparison between theoretical bin pdf $f_{\msf{B}}(b)$ and empirical pdf for an only noise 
+    bin and for a bin with signal. The continuous lines represent the theoretical distributions, the histograms
+    plot the number of occurences of each instantiations value, normalized over $N$. The choosen number 
+    of instantiations of each RV of the signal sample is $N=10000$ and the number of samples for bin is 
+    $N_{sb} = 5$.}
+  \end{figure}
+  %
+\section{Results}
+  We introduce now the results of the experience. The first goal is to test that the empirical distribution,
+  obtained with a simulation, of a bin tends to the distribution \ref{eq:bin_dist} for a large number of 
+  instantiations $N$. The second goal is to check the performances of the two algorithms TSC and MBS, for different
+  levels of the threshold noise ratio $\rho$ ($\rho = \frac{\xi^2}{\sigma^2}$), by varying the signal noise ratio
+  $\gamma$.
+  
+  
+  \subsection{Bin distribution}
+    
+    In order to check the distribution given in \ref{eq:bin_dist}, we have simulated $N=10000$ instantiations of a signal sample
+    with and without signal energy (only noise bin). We assume a SNR $\gamma = 15 \si{dB}$ for the bin with signal 
+    and we choose $N_{sb}=5$.
+    It is supposed that the noise has a variance $\sigma^2 = 1$ and that only one transmission is performed
+    ($N_p = 1$).
+    The parameter \ref{eq:lambda_par} becomes, for the bin with signal
+    \begin{equation}
+      \lambda_i = A^2,
+      \label{eq:lambda_signal}
+    \end{equation}
+    where $A$ is the amplitude of the signal obtained as $A = \sqrt{\gamma \sigma^2}$, and 
+    \begin{equation}
+      \lambda_i = 0
+      \label{eq:lambda_noise}
+    \end{equation}
+    for the only noise bin.
+
+    As we can see in the figure \ref{fig:signal_bin}, for the bin with the signal energy, and in the figure
+    \ref{fig:noise_bin}, for the only noise bin; the histograms which plot the occurences for 
+    each value of the instantiations (normalized over $N$), obtained with a simulation,
+    follow the theoretical functions (continuous lines), obtained with the equation 
+    \ref{eq:bin_dist} with the $\lambda$ values calculated as in the equations \ref{eq:lambda_signal} and
+    \ref{eq:lambda_noise}.
+
+  %
+  \begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.49\linewidth}
+      \includestandalone{./Images/threshold_crossing_search}
+      \caption{TCS algorithm simulation.}
+      \label{fig:TCS}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.49\linewidth}
+      \includestandalone{./Images/maximum_bin_search}
+      \caption{MBS algorithm simulation.}
+      \label{fig:MBS}
+    \end{subfigure}
+    \caption{Estimated probability of success $\hat{P}_s$ in the bin with signal research as function of $\gamma$ for 
+    different values of $\rho$. The number 
+    of instantiations of each RV of the signal sample choosen is $N=10000$ and the number of samples for bin is 
+    $N_{sb} = 5$.}
+  \end{figure}
+  %
+  %
+  \begin{figure}[t]
+    \centering
+    \includestandalone{./Images/threshold_plot}
+    \caption{Thresholds position over the theoretical noise and signal bin distributions. Bin distributions are 
+    obtained with $\sigma^2 = 1$ and $\gamma = 15\si{dB}$ for the signal bin.
+    The dashed lines show the threshold levels over the distributions (filled plots).}
+    \label{fig:TCS_explain1}
+
+  \end{figure}
+  %
+  \subsection{Algorithms performance}
+    The performances evaluation of the two algorithms (TCS and MBS) were carried out with a software simulation 
+    that realizes $N = 10000$ instantiations of the $N_s = 100$ samples of the received signal, for each 
+    $\gamma \in \left[ 0\si{dB}, 25\si{dB} \right]$ and for each $\rho \in \{ 10\si{dB}, 20\si{dB}, 30\si{dB}, 
+    40\si{dB} \}$. We assume that 
+    only one sample contains the transmitted signal i.e, there are not reflections in the communication channel.
+    For each instantiation set, from the signal samples we have computed the bin samples and then the two 
+    algorithms have been applied. We have counted the number of successes in the bin research for $N$ instantiations 
+    and then we have estimated the probability of success $P_s$ as the success rate:
+    \begin{equation}
+      \hat{P}_s = \frac{\# successes}{N}
+    \end{equation}
+    The success event is verified when the recognized $\hat{\imath}$ is the same as the bin with signal $i^*$.
+    We have assumed that the noise is AWGN with variance $\sigma^2 = 1$ and we have choosen $N_{sb} = 5$ and 
+    $N_p = 1$.
+
+    In figure \ref{fig:TCS} we can see the plot of the performance for the TCS algorithm where, on the \mbox{x-axis}
+    there are the SNR $\gamma$ in $\si{dB}$ scale and in the \mbox{y-axis} there is the estimated success probability
+    $\hat{P}_s$. We can observe that for $\rho = 10 \si{dB}$ the $\hat{P}_s$ is near to $0$ for all $\gamma$.
+    If we look to the figure \ref{fig:TCS_explain1}, that plots the thresholds over the pdfs of noise and 
+    signal bins for $\gamma = 15 \si{dB}$, it is clear that both noise and signal can be over this threshold. 
+    The decisor so, can easily fail in its job. 
+    For the others $\rho$ we can see that when $\gamma$ is less then $\rho$ nothing can be recognize and so 
+    $\hat{P}_s \simeq 0$. When instead $\gamma$ is greater the $\rho$ the success probability $\hat{P}_s$ is 
+    as near to $1$ as threshold is high but higher threshold implies that we need more SNR for a correct operation
+    of the decisor.
+    In figure \ref{fig:TCS_explain1} we can see that:
+    \begin{itemize}
+      \item with $\gamma = 20 \si{dB}$, a small portion of noise is over 
+      $\rho = 20 \si{dB}$ (i.e there is a little probability that noise exceed the threshold) and the signal is 
+      all over the threshold. The $\hat{P}_s$ is so lower then $1$ because noise can be recognized as signal.
+      \item With $\gamma = 30 \si{dB}$ all the noise is under the threshold and only a portion of signal is over that.
+      The probability of success $\hat{P}_s$ is so lower than $1$ because the signal can be unrecognized.
+      \item With $\gamma = 40 \si{dB}$ neither the noise and the signal are over the threshold. The $\hat{P}_s$ so is 
+      equal (or near) to $0$.
+    \end{itemize}
+
+    In figure \ref{fig:MBS} we can see the performance of the MBS algorithm. We can notice that, indeed the TCS
+    algorithm, for a $\gamma$ high enough, the signal is always correctly recognized and so $\hat{P}_s \simeq 1$. When 
+    $\gamma$ is lower instead, the signal can be confused with the noise and the $\hat{P}_s$ is lower than $1$.
+    For the highest $\rho$, the $\hat{P}_s$ for low $\gamma$ is near to $0$ because the signal is all under the 
+    threshold (as for the TCS decisor).
+     
+
+\newpage
+\bibliographystyle{IEEEtran}
+\bibliography{bibliography}
+\end{document}

@@ -1,0 +1,88 @@
+% This file was created with tikzplotlib v0.9.15.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.12156862745098,0.466666666666667,0.705882352941177}
+\definecolor{color1}{rgb}{1,0.498039215686275,0.0549019607843137}
+\definecolor{color2}{rgb}{0.172549019607843,0.627450980392157,0.172549019607843}
+\definecolor{color3}{rgb}{0.83921568627451,0.152941176470588,0.156862745098039}
+
+\begin{axis}[
+legend cell align={left},
+legend style={
+  fill opacity=0.8,
+  draw opacity=1,
+  text opacity=1,
+  at={(0.03,0.97)},
+  anchor=north west,
+  draw=white!80!black
+},
+tick align=outside,
+tick pos=left,
+x grid style={white!69.0196078431373!black},
+xlabel={sigma2},
+xmin=-0.0395, xmax=1.0495,
+xtick style={color=black},
+y grid style={white!69.0196078431373!black},
+ylabel={MSE},
+ymin=-0.0390012, ymax=1.0908407,
+ytick style={color=black}
+]
+\addplot [semithick, color0]
+table {%
+0.01 0.01235525
+0.12 0.12840825
+0.23 0.24041425
+0.34 0.351263
+0.45 0.4587535
+0.56 0.5560815
+0.67 0.667568
+0.78 0.770878
+0.89 0.882334
+1 0.982519
+};
+\addlegendentry{b = 0.0}
+\addplot [semithick, color1]
+table {%
+0.01 0.01999875
+0.12 0.13161325
+0.23 0.24741125
+0.34 0.35342025
+0.45 0.466717
+0.56 0.57367
+0.67 0.68026575
+0.78 0.784943
+0.89 0.88216975
+1 0.99640175
+};
+\addlegendentry{b = 0.2}
+\addplot [semithick, color2]
+table {%
+0.01 0.0380225
+0.12 0.1499265
+0.23 0.2595525
+0.34 0.3699065
+0.45 0.4755225
+0.56 0.586331
+0.67 0.67940425
+0.78 0.7893475
+0.89 0.89504675
+1 0.98882275
+};
+\addlegendentry{b = 0.4}
+\addplot [semithick, color3]
+table {%
+0.01 0.026337
+0.12 0.2672855
+0.23 0.34805575
+0.34 0.437537
+0.45 0.52854925
+0.56 0.63409475
+0.67 0.73380525
+0.78 0.8441835
+0.89 0.93363425
+1 1.03948425
+};
+\addlegendentry{b = 0.8}
+\end{axis}
+
+\end{tikzpicture}
