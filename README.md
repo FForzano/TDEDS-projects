@@ -1,6 +1,6 @@
-# *Techniques for Decision, Estimation, and Distributed Sensing (TDEDS)* Projects Repository
+# *Decision, Estimation and Distributed Sensing Techniques (DEDST)* Projects Repository
 
-This repository contains three projects developed for the university course "Tecniche di Decisione, Stima e Sensing Distribuito" (Techniques for Decision, Estimation, and Distributed Sensing), held by Prof. Andrea Conti and attended in 2022.
+This repository contains three projects developed for the university course "Tecniche di Decisione, Stima e Sensing Distribuito" (Decision, Estimation and Distributed Sensing Techniques), held by Prof. Andrea Conti and attended in 2022.
 
 Official course page: [Tecniche di Decisione, Stima e Sensing Distribuito - Unife](https://unife.coursecatalogue.cineca.it/insegnamenti/2023/49061/2018/1/10835?coorte=2022&schemaid=11454)
 
